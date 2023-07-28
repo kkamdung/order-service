@@ -23,7 +23,7 @@ public class Order {
     private OrderStatus status;
 
     @CreatedDate
-    private Instant createDate;
+    private Instant createdDate;
 
     @LastModifiedDate
     private Instant lastModifiedDate;
