@@ -69,11 +69,11 @@ class OrderServiceApplicationTests {
                 .exchange()
                 .expectStatus().is2xxSuccessful()
                 .expectBodyList(Order.class)
-                .value(orders -> {
+                .value(orders ->
                     assertThat(orders.stream().filter(order ->
                             order.bookIsbn().equals(bookIsbn)).findAny())
-                            .isNotEmpty();
-                });
+                            .isNotEmpty()
+                );
     }
 
     @Test
