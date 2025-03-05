@@ -5,6 +5,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+
 @RequiredArgsConstructor
 @Component
 public class BookClient {
@@ -17,23 +19,8 @@ public class BookClient {
                 .get()
                 .uri(BOOKS_ROOT_API + isbn)
                 .retrieve()
-                .bodyToMono(Book.class);
+                .bodyToMono(Book.class)
+                .timeout(Duration.ofSeconds(3), Mono.empty());
     }
 
 }
-/*
-
-	public Mono<Book> getBookByIsbn(String isbn) {
-
-
-
-
-
-				.timeout(Duration.ofSeconds(3), Mono.empty())
-				.onErrorResume(WebClientResponseException.NotFound.class, exception -> Mono.empty())
-				.retryWhen(Retry.backoff(3, Duration.ofMillis(100)))
-				.onErrorResume(Exception.class, exception -> Mono.empty());
-	}
-
-}
- */
