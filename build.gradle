@@ -26,6 +26,7 @@ repositories {
 ext {
     set('springCloudVersion', "2024.0.0")
     set('testKeycloakVersion', "3.3.1")
+    set('otelVersion', "2.4.0")
 }
 
 dependencies {
@@ -45,6 +46,7 @@ dependencies {
     runtimeOnly 'org.postgresql:r2dbc-postgresql'
     runtimeOnly 'org.springframework:spring-jdbc'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+    runtimeOnly "io.opentelemetry.javaagent:opentelemetry-javaagent:${otelVersion}"
 
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
