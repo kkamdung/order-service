@@ -2,6 +2,7 @@ package com.polarbookshop.orderservice.order.domain;
 
 import com.polarbookshop.orderservice.book.Book;
 import com.polarbookshop.orderservice.book.BookClient;
+import com.polarbookshop.orderservice.order.event.OrderDispatchedMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -31,6 +32,25 @@ public class OrderService {
 
     private Order buildRejectedOrder(String bookIsbn, int quantity) {
         return Order.of(bookIsbn, null, null, quantity, OrderStatus.REJECTED);
+    }
+
+    public Flux<Order> consumeOrderDispatchedEvent(Flux<OrderDispatchedMessage> flux) {
+        return flux
+                .flatMap(message -> orderRepository.findById(message.orderId()))
+                .map(this::buildDispatchedOrder)
+                .flatMap(orderRepository::save);
+    }
+
+    private Order buildDispatchedOrder(Order existingOrder) {
+        return new Order(existingOrder.id(),
+                existingOrder.bookIsbn(),
+                existingOrder.bookName(),
+                existingOrder.bookPrice(),
+                existingOrder.quantity(),
+                OrderStatus.DISPATCHED,
+                existingOrder.createdDate(),
+                existingOrder.lastModifiedDate(),
+                existingOrder.version());
     }
 
 }
