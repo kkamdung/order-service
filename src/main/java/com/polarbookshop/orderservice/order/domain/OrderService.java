@@ -68,7 +68,9 @@ public class OrderService {
                 existingOrder.bookPrice(),
                 existingOrder.quantity(),
                 OrderStatus.DISPATCHED,
+                existingOrder.createdBy(),
                 existingOrder.createdDate(),
+                existingOrder.lastModifiedBy(),
                 existingOrder.lastModifiedDate(),
                 existingOrder.version());
     }

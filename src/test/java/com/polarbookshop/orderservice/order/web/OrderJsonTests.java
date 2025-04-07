@@ -21,7 +21,7 @@ class OrderJsonTests {
 
     @Test
     void testSerialize() throws IOException {
-        Order order = new Order(394L, "1234567890", "Book Name", 9.90, 1, OrderStatus.ACCEPTED, Instant.now(), Instant.now(), 21);
+        Order order = new Order(394L, "1234567890", "Book Name", 9.90, 1, OrderStatus.ACCEPTED, "jon", Instant.now(), "marlena", Instant.now(), 21);
         JsonContent<Order> jsonContent = json.write(order);
 
         assertThat(jsonContent).extractingJsonPathNumberValue("@.id")
@@ -36,8 +36,12 @@ class OrderJsonTests {
                 .isEqualTo(order.quantity());
         assertThat(jsonContent).extractingJsonPathStringValue("@.status")
                 .isEqualTo(order.status().toString());
+        assertThat(jsonContent).extractingJsonPathStringValue("@.createdBy")
+                .isEqualTo(order.createdBy());
         assertThat(jsonContent).extractingJsonPathStringValue("@.createdDate")
                 .isEqualTo(order.createdDate().toString());
+        assertThat(jsonContent).extractingJsonPathStringValue("@.lastModifiedBy")
+                .isEqualTo(order.lastModifiedBy());
         assertThat(jsonContent).extractingJsonPathStringValue("@.lastModifiedDate")
                 .isEqualTo(order.lastModifiedDate().toString());
         assertThat(jsonContent).extractingJsonPathNumberValue("@.version")
