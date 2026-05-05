@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS orders;
+
 CREATE TABLE orders (
   id                  BIGSERIAL PRIMARY KEY NOT NULL,
   book_isbn           varchar(255) NOT NULL,
