@@ -18,11 +18,16 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    set('springCloudVersion', '2025.1.2')
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'com.squareup.okhttp3:okhttp:5.4.0'
+    implementation 'org.springframework.cloud:spring-cloud-config-client'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'org.postgresql:r2dbc-postgresql'
@@ -42,6 +47,12 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
 }
 
 tasks.named('test') {
