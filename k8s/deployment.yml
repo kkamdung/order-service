@@ -25,8 +25,6 @@ spec:
           ports:
             - containerPort: 9002
           env:
-            - name: BPL_JVM_THREAD_COUNT
-              value: "50"
             - name: POLAR_CATALOG_SERVICE_URI
               value: http://catalog-service
             - name: SPRING_CLOUD_CONFIG_URI
@@ -37,3 +35,5 @@ spec:
               value: r2dbc:postgresql://polar-postgres/polardb_order
             - name: SPRING_FLYWAY_URL
               value: jdbc:postgresql://polar-postgres/polardb_order
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              value: http://polar-keycloak/realms/PolarBookshop
