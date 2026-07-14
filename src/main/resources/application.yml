@@ -69,7 +69,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: refresh, health, prometheus
+        include: refresh, health, prometheus, flyway
   endpoint:
     health:
       show-details: always
