@@ -1,19 +1,29 @@
 package com.polarbookshop.orderservice.order.web;
 
+import com.polarbookshop.orderservice.config.SecurityConfig;
 import com.polarbookshop.orderservice.order.domain.Order;
 import com.polarbookshop.orderservice.order.domain.OrderService;
 import com.polarbookshop.orderservice.order.domain.OrderStatus;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.test.web.reactive.server.WebTestClientConfigurer;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.springSecurity;
 
 @WebFluxTest(OrderController.class)
+@Import(SecurityConfig.class)
 class OrderControllerWebFluxTests {
 
     @Autowired
@@ -22,6 +32,17 @@ class OrderControllerWebFluxTests {
     @MockitoBean
     private OrderService orderService;
 
+    @Autowired
+    private ApplicationContext context;
+
+    @BeforeEach
+    public void setUp() {
+        webClient = WebTestClient
+                .bindToApplicationContext(context)
+                .apply(springSecurity())
+                .build();
+    }
+
     @Test
     void whenBookNotAvailableThenRejectOrder() {
         var orderRequest = new OrderRequest("1234567890", 3);
@@ -29,7 +50,11 @@ class OrderControllerWebFluxTests {
         given(orderService.submitOrder(orderRequest.isbn(), orderRequest.quantity()))
                 .willReturn(Mono.just(expectedOrder));
 
-        webClient.post()
+        webClient
+                .mutateWith(SecurityMockServerConfigurers
+                        .mockJwt()
+                        .authorities(new SimpleGrantedAuthority("ROLE_customer")))
+                .post()
                 .uri("/orders")
                 .bodyValue(orderRequest)
                 .exchange()
