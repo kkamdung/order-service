@@ -1,20 +1,28 @@
 package com.polarbookshop.orderservice;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.polarbookshop.orderservice.book.Book;
 import com.polarbookshop.orderservice.book.BookClient;
 import com.polarbookshop.orderservice.order.domain.Order;
 import com.polarbookshop.orderservice.order.domain.OrderStatus;
 import com.polarbookshop.orderservice.order.web.OrderRequest;
+import dasniko.testcontainers.keycloak.KeycloakContainer;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -29,6 +37,14 @@ import static org.mockito.BDDMockito.given;
 @Testcontainers
 @AutoConfigureWebTestClient
 class OrderServiceApplicationTests {
+
+    private static KeycloakToken isabelleTokens;
+    private static KeycloakToken bjornTokens;
+
+    @Container
+    static KeycloakContainer keycloakContainer =
+            new KeycloakContainer(DockerImageName.parse("quay.io/keycloak/keycloak:26.6.4"))
+                    .withRealmImportFile("/test-realm-config.json");
 
     @Container
     static PostgreSQLContainer postgresql = new PostgreSQLContainer(DockerImageName.parse("postgres:18.4"));
@@ -45,6 +61,8 @@ class OrderServiceApplicationTests {
         registry.add("spring.r2dbc.username", postgresql::getUsername);
         registry.add("spring.r2dbc.password", postgresql::getPassword);
         registry.add("spring.flyway.url", postgresql::getJdbcUrl);
+        registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
+                () -> keycloakContainer.getAuthServerUrl() + "/realms/PolarBookshop");
     }
 
     private static String r2dbcUrl() {
@@ -54,6 +72,30 @@ class OrderServiceApplicationTests {
                 postgresql.getDatabaseName());
     }
 
+    @BeforeAll
+    static void generateAccessTokens() {
+        WebClient webClient = WebClient.builder()
+                .baseUrl(keycloakContainer.getAuthServerUrl() + "/realms/PolarBookshop/protocol/openid-connect/token")
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .build();
+
+        isabelleTokens = authenticateWith("isabelle", "password", webClient);
+        bjornTokens = authenticateWith("bjorn", "password", webClient);
+    }
+
+    private static KeycloakToken authenticateWith(String username, String password, WebClient webClient) {
+        return webClient
+                .post()
+                .body(BodyInserters
+                        .fromFormData("grant_type", "password")
+                        .with("client_id", "polar-test")
+                        .with("username", username)
+                        .with("password", password))
+                .retrieve()
+                .bodyToMono(KeycloakToken.class)
+                .block();
+    }
+
     @Test
     void whenGetOrdersThenReturn() {
         String bookIsbn = "1234567893";
@@ -61,8 +103,10 @@ class OrderServiceApplicationTests {
         given(bookClient.getBookByIsbn(bookIsbn)).willReturn(Mono.just(book));
 
         OrderRequest orderRequest = new OrderRequest(bookIsbn, 1);
-        Order createdOrder = webTestClient.post()
+        Order createdOrder = webTestClient
+                .post()
                 .uri("/orders")
+                .headers(headers -> headers.setBearerAuth(bjornTokens.accessToken()))
                 .bodyValue(orderRequest)
                 .exchange()
                 .expectStatus().is2xxSuccessful()
@@ -72,8 +116,10 @@ class OrderServiceApplicationTests {
 
         assertThat(createdOrder).isNotNull();
 
-        webTestClient.get()
+        webTestClient
+                .get()
                 .uri("/orders")
+                .headers(headers -> headers.setBearerAuth(bjornTokens.accessToken()))
                 .exchange()
                 .expectStatus().is2xxSuccessful()
                 .expectBodyList(Order.class)
@@ -92,6 +138,7 @@ class OrderServiceApplicationTests {
 
         Order createdOrder = webTestClient.post()
                 .uri("/orders")
+                .headers(headers -> headers.setBearerAuth(bjornTokens.accessToken()))
                 .bodyValue(orderRequest)
                 .exchange()
                 .expectStatus().is2xxSuccessful()
@@ -116,6 +163,7 @@ class OrderServiceApplicationTests {
 
         Order createdOrder = webTestClient.post()
                 .uri("/orders")
+                .headers(headers -> headers.setBearerAuth(bjornTokens.accessToken()))
                 .bodyValue(orderRequest)
                 .exchange()
                 .expectStatus().is2xxSuccessful()
@@ -127,6 +175,13 @@ class OrderServiceApplicationTests {
         assertThat(createdOrder.bookIsbn()).isEqualTo(orderRequest.isbn());
         assertThat(createdOrder.quantity()).isEqualTo(orderRequest.quantity());
         assertThat(createdOrder.status()).isEqualTo(OrderStatus.REJECTED);
+    }
+
+    private record KeycloakToken(String accessToken) {
+        @JsonCreator
+        private KeycloakToken(@JsonProperty("access_token") final String accessToken) {
+            this.accessToken = accessToken;
+        }
     }
 
 }
